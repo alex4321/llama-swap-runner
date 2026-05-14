@@ -1,0 +1,6 @@
+[submodule "llama.cpp"]
+	path = llama.cpp
+	url = git@github.com:ggml-org/llama.cpp.git
+[submodule "llama-swap"]
+	path = llama-swap
+	url = git@github.com:mostlygeek/llama-swap.git
