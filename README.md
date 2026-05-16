@@ -53,16 +53,20 @@ file are reloaded automatically by llama-swap.
 Example config for a local `llama-server` model:
 
 ```yaml
+globalTTL: 300
+
 models:
   qwen-3.6-27b:
-    cmd: 'llama-server --port ${PORT}
-          --model Qwen3.6-27B-Q4_K_M.gguf
-          --mmproj Qwen-3.6-27B-mmproj-BF16.gguf
-          -c 131072
-          -fa 1
-          -ngl 64
-          --cache-type-k q8_0
-          --cache-type-v q8_0'
+    cmd: >-
+      llama-server --port ${PORT}
+      --model Qwen3.6-27B-Q4_K_M.gguf
+      --mmproj Qwen-3.6-27B-mmproj-BF16.gguf
+      -c 131072
+      -fa 1
+      -ngl 64
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+      --chat-template-kwargs '{"preserve_thinking":true}'
 ```
 
 Model paths are resolved relative to the config file directory because
