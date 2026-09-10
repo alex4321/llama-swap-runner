@@ -25,19 +25,37 @@ git submodule update --init --recursive
 make
 ```
 
-The `llama.cpp` build currently uses GCC/G++ 14 and CUDA:
+`make` is meant for a *fresh* `llama.cpp/build`. The build directory in this
+checkout was configured by hand instead, using the default GCC together with a
+conda sysroot so `nvcc` accepts the host headers:
 
 ```bash
-CC=/usr/bin/gcc-14 CXX=/usr/bin/g++-14 cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-14
+cmake -B build -DGGML_CUDA=ON \
+  -DCMAKE_CUDA_FLAGS=-Xcompiler=--sysroot=$HOME/miniconda3/envs/cuda-build/x86_64-conda-linux-gnu/sysroot
 ```
+
+Running the `Makefile`'s `llamacpp` target over that cache would add
+`-DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-14` and change the working
+configuration. To rebuild llama.cpp without disturbing it:
+
+```bash
+cd llama.cpp && cmake --build build --config Release -j$(nproc)
+```
+
+The current binaries were built with CMake 4.2.3, CUDA 13.1, GCC 15.2 and
+ccache. `llama-swap` additionally needs Go (>= 1.27, see its `go.mod`; older
+toolchains download the right one automatically) and Node.js for the embedded
+web UI.
 
 ## Run
 
 Pass a llama-swap config file to `server.sh`:
 
 ```bash
-./server.sh /path/to/config.yml
+bash server.sh /path/to/config.yml
 ```
+
+The wrapper scripts are not marked executable, so invoke them through `bash`.
 
 The server listens on:
 
@@ -72,6 +90,9 @@ models:
 Model paths are resolved relative to the config file directory because
 `preparation.sh` changes into that directory before starting `llama-swap`.
 
+`-fa 1` is still accepted, but current llama.cpp spells the flag
+`-fa on|off|auto`.
+
 Useful checks:
 
 ```bash
@@ -87,7 +108,7 @@ curl http://localhost:8080/v1/chat/completions \
 Run benchmarks for commands found in the llama-swap config:
 
 ```bash
-./bench.sh /path/to/config.yml
+bash bench.sh /path/to/config.yml
 ```
 
 `bench.sh` strips server-only arguments such as `--port`, `--ctx-size`, and
@@ -101,10 +122,16 @@ Fetch and checkout the latest upstream commits for both submodules:
 git submodule update --remote --merge llama.cpp llama-swap
 ```
 
-Rebuild after updating:
+Building the llama-swap web UI leaves `ui/package-lock.json` modified inside
+the submodule; restore it (`git -C llama-swap checkout -- ui/package-lock.json`)
+before updating, or the merge will refuse to run.
+
+Rebuild after updating - llama.cpp incrementally against its existing cache,
+llama-swap from clean:
 
 ```bash
-make
+cd llama.cpp && cmake --build build --config Release -j$(nproc)
+cd ../llama-swap && make clean && make all
 ```
 
 Commit the updated submodule pointers in this repository:
