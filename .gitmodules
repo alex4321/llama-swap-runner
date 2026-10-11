@@ -1,12 +1,16 @@
 [submodule "llama.cpp"]
 	path = llama.cpp
 	url = git@github.com:ggml-org/llama.cpp.git
+	ignore = untracked
 [submodule "llama-swap"]
 	path = llama-swap
 	url = git@github.com:mostlygeek/llama-swap.git
+	ignore = untracked
 [submodule "localjev"]
 	path = localjev
 	url = https://github.com/githubnext/localjev
+	ignore = untracked
 [submodule "Strata"]
 	path = Strata
 	url = git@github.com:Niko1221/Strata.git
+	ignore = untracked
