@@ -4,3 +4,6 @@
 [submodule "llama-swap"]
 	path = llama-swap
 	url = git@github.com:mostlygeek/llama-swap.git
+[submodule "localjev"]
+	path = localjev
+	url = https://github.com/githubnext/localjev

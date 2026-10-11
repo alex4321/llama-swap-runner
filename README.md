@@ -52,7 +52,7 @@ web UI.
 Pass a llama-swap config file to `server.sh`:
 
 ```bash
-bash server.sh /path/to/config.yml
+bash server.sh /path/to/config.yml --fallback-model qwen-3.8-27b
 ```
 
 The wrapper scripts are not marked executable, so invoke them through `bash`.
@@ -62,6 +62,14 @@ The server listens on:
 ```text
 http://localhost:8080
 ```
+
+This also starts the dynamic LocalJev wrapper on `127.0.0.1:8082`.
+The fallback model ID is required. Options after the config path are forwarded
+to `jev.sh`, for example `--port 8082 --timeout-ms 3800`.
+Both services run in the background; logs are `server.log` and `jev.log` in
+the config directory. Printed PIDs identify the launched processes, not a
+readiness guarantee; check `/health` on each service before use.
+Initialize the LocalJev submodule and install Bun before starting.
 
 `server.sh` starts `llama-swap` with `--watch-config`, so changes to the config
 file are reloaded automatically by llama-swap.
@@ -102,6 +110,20 @@ curl http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"qwen-3.6-27b","messages":[{"role":"user","content":"Say hello"}],"max_tokens":32}'
 ```
+
+## Local Jev API
+
+`jev.sh` hosts LocalJev with request-scoped model routing through llama-swap:
+
+```bash
+git submodule update --init localjev
+bash jev.sh --fallback-model qwen-3.8-27b
+```
+
+Point OpenChamber at `http://127.0.0.1:8082/v1/systemone`, model `jev-latest`.
+The wrapper reuses a ready supported model and loads the supplied fallback only
+when llama-swap is idle. See [jev/README.md](jev/README.md) for routing rules,
+credentials, deadlines, tests, and safety limitations.
 
 ## Benchmark
 

@@ -1,0 +1,152 @@
+Local Jev preparation: session summary
+Date: 2026-10-12
+
+GOAL
+Enable OpenChamber's automatic permission safety net using a locally controlled
+classifier backed by an OpenAI-compatible model server, without requiring the
+hosted TypeSafe Jev service or DiffusionGemma specifically.
+
+REQUIRED ARCHITECTURE
+OpenChamber -> LocalJev /v1/systemone -> Strata or llama.cpp /v1/chat/completions
+
+OpenChamber's custom classification endpoint expects TypeSafe's System One
+request/response protocol (state, model, typed questions, answers), not ordinary
+OpenAI Chat Completions. A bridge is therefore needed.
+
+SELECTED CANDIDATE: LOCALJEV
+Repository: https://github.com/githubnext/localjev
+LocalJev is a TypeScript/Bun HTTP bridge exposing POST /v1/systemone.
+It translates choice, score and noul (yes/no) questions into model prompts,
+requests JSON probability estimates, validates them and returns Jev-shaped answers.
+
+Its README and defaults focus on DiffusionGemma, but the implementation does NOT
+require DiffusionGemma. The upstream URL, API key and model are configurable.
+It does not require special diffusion inference or token logprobs.
+
+Do not confuse LocalJev with https://github.com/razorback16/openjev.
+That OpenJev project's primary DiffusionGemma path uses specialized inference
+machinery; it is not the generic Chat Completions bridge discussed here.
+
+WHAT WE NEED
+1. A running Strata or llama.cpp server with an appropriate instruct model.
+2. Bun 1.2+ and a LocalJev checkout with dependencies installed (bun install).
+3. LocalJev upstream configuration matching the model server.
+4. OpenChamber custom classification-provider configuration pointing at LocalJev.
+5. Integration, latency and safety-quality tests before enabling automatic approval.
+
+EXAMPLE LLAMA.CPP SETUP (NOT EXECUTED)
+llama-server -m /path/to/instruct-model.gguf --alias classifier --port 8000
+
+LocalJev .env:
+LOCALJEV_UPSTREAM=http://127.0.0.1:8000/v1
+LOCALJEV_UPSTREAM_MODEL=classifier
+# LOCALJEV_UPSTREAM_API_KEY=...   if the upstream requires authentication
+# LOCALJEV_API_KEY=...            optional key protecting LocalJev itself
+
+Start LocalJev from its checkout:
+bun install
+bun run start
+
+LocalJev listens on 127.0.0.1:8080 by default. Choose another port if needed,
+especially if Strata or another local service already occupies port 8080.
+LOCALJEV_PORT controls LocalJev's port.
+
+OPENCHAMBER CONFIGURATION
+Settings -> Providers -> Classification providers -> Custom endpoint:
+Endpoint URL: http://127.0.0.1:8080/v1/systemone
+Model: jev-latest
+API key: the LOCALJEV_API_KEY value, only if configured
+
+OpenChamber calls the exact endpoint URL entered; include /v1/systemone.
+LocalJev accepts jev-latest as an alias. Its actual inference model is selected
+separately by LOCALJEV_UPSTREAM_MODEL.
+If services run in separate containers or on different machines, replace the
+loopback addresses with addresses reachable from each calling service.
+
+Alternative OpenChamber environment configuration:
+OPENCHAMBER_JEV_URL=http://127.0.0.1:8080/v1/systemone
+OPENCHAMBER_JEV_MODEL=jev-latest
+# OPENCHAMBER_JEV_API_KEY=...   if LocalJev requires a key
+
+BACKEND COMPATIBILITY FINDINGS
+llama.cpp:
+- Its llama-server exposes OpenAI-compatible Chat Completions.
+- Supports schema-constrained JSON generation using a schema-derived grammar.
+- A suitable backend for LocalJev; the actual model still needs evaluation.
+
+Strata (Niko1221/Strata):
+- Confirmed in current source: accepts OpenAI-style response_format with
+  type=json_schema, a named json_schema object, schema and optional strict flag.
+- LocalJev's object-root schema fits the accepted request format.
+- The examined structured-output path prompts the model with the schema and
+  validates the generated answer; it is not grammar-constrained decoding.
+- Full validation requires Python's jsonschema package. Without it, Strata only
+  verifies that the answer is a JSON object and logs a warning.
+- Suggested dependency command from Strata source:
+  python -m pip install "jsonschema>=4.23,<5"
+  Run this in Strata's own Python environment, not blindly in system Python.
+- Invalid or incomplete structured output is an error, not a successful answer.
+
+LOCALJEV PROVIDER-COMPATIBILITY LIMITS
+The examined engine always sends:
+- response_format: strict json_schema
+- temperature, seed and max_tokens
+- chat_template_kwargs: { enable_thinking: false }
+
+Some OpenAI-compatible providers reject unsupported fields. LocalJev does not
+implement a parameter-compatibility fallback for these HTTP failures, so saying
+it works with ANY OpenAI-compatible provider would be too strong.
+JSON-schema acceptance is confirmed for Strata, but the complete LocalJev request
+has not been tested against either local backend in this session.
+Verify that thinking is actually disabled for the chosen model/template; the
+enable_thinking field alone should not be assumed to work with every backend.
+
+PERMISSION-SAFETY AND LATENCY REQUIREMENTS
+OpenChamber waits at most four seconds for classification. On timeout or failure,
+the safety net leaves the action waiting for human approval (fail closed).
+Choose a fast model, keep it resident and test complete request latency including
+queueing, prompt processing, JSON generation and any retries.
+
+LocalJev generates/self-reports probabilities; they are not equivalent to
+calibrated TypeSafe Jev probabilities. Its choice/score confidence is calculated
+from distribution entropy, not an independently measured probability of correctness.
+Schema validity does not establish that a command is safe.
+
+Test at least:
+- Routine reads, builds, tests and project-file edits.
+- Destructive deletes and git-history rewriting.
+- Credential access, exfiltration and network uploads.
+- Deployments, system changes and public posting.
+- Ambiguous commands, chained shell actions and prompt-injection attempts.
+- Malformed responses, backend outages, cold starts and concurrent requests.
+
+Keep explicit permission restrictions and manual approval for consequential
+actions; do not treat an unvalidated local classifier as the sole security boundary.
+
+ALTERNATIVE
+https://github.com/zhulinchng/jevper
+Python library wrapping multiple provider surfaces, including OpenAI-compatible
+Chat Completions and Responses. More provider-flexible, but needs an HTTP wrapper
+to expose the System One endpoint OpenChamber expects.
+
+NEXT STEPS
+1. Inspect the installed Strata/llama.cpp versions and available models.
+2. Select a backend, model and non-conflicting ports.
+3. Install/configure LocalJev and upstream authentication if needed.
+4. Check LocalJev /ready and send representative /v1/systemone requests.
+5. Measure latency and dangerous-command false approvals on verified examples.
+6. Configure OpenChamber and confirm failures/timeouts still require approval.
+7. Enable the safety net only after integration and quality checks pass.
+
+STATUS AT END OF SESSION
+Research and source inspection only. No LocalJev installation, configuration
+changes, model execution or OpenChamber integration tests were performed.
+This summary is preparation, not proof that the full integration works.
+
+SOURCES
+https://docs.openchamber.dev/classification-providers/
+https://docs.openchamber.dev/permissions/
+https://github.com/githubnext/localjev
+https://github.com/githubnext/localjev/blob/main/src/engine.ts
+https://github.com/Niko1221/Strata/blob/main/serve/structured.py
+https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md
