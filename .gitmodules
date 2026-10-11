@@ -7,3 +7,6 @@
 [submodule "localjev"]
 	path = localjev
 	url = https://github.com/githubnext/localjev
+[submodule "Strata"]
+	path = Strata
+	url = git@github.com:Niko1221/Strata.git
