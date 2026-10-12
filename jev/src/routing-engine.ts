@@ -5,7 +5,7 @@ import type { JsonValue, Question } from "../../localjev/src/types";
 import type { Config } from "./config";
 import { LlamaSwapClient, type Fetch } from "./llama-swap-client";
 import { selectModel } from "./model-selector";
-import { summarizeAnswers } from "./decision-log";
+import { summarizeAnswers, describeAction } from "./decision-log";
 
 export const requestSignals = new AsyncLocalStorage<AbortSignal>();
 
@@ -39,10 +39,10 @@ export class RoutingEngine implements DecisionEngine {
       });
       const result = await engine.decide(questions, state, seed);
       signal.throwIfAborted();
-      console.info(JSON.stringify({ event: "decision", model, elapsedMs: Math.round(performance.now() - started), status: "ok", answers: summarizeAnswers(result.answers) }));
+      console.info(JSON.stringify({ event: "decision", action: describeAction(state), model, elapsedMs: Math.round(performance.now() - started), status: "ok", answers: summarizeAnswers(result.answers) }));
       return result;
     } catch (error) {
-      console.info(JSON.stringify({ event: "decision", model, elapsedMs: Math.round(performance.now() - started), status: "failed", reason: error instanceof Error ? error.message : String(error) }));
+      console.info(JSON.stringify({ event: "decision", action: describeAction(state), model, elapsedMs: Math.round(performance.now() - started), status: "failed", reason: error instanceof Error ? error.message : String(error) }));
       if (signal.aborted) throw new BackendUnavailableError("Classification deadline exceeded or client disconnected");
       throw error;
     } finally { this.busy = false; }

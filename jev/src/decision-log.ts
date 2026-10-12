@@ -17,3 +17,10 @@ export function summarizeAnswer(answer: Answer): { value: string | number; confi
 export function summarizeAnswers(answers: Record<string, Answer>): Record<string, { value: string | number; confidence?: number }> {
   return Object.fromEntries(Object.entries(answers).map(([key, answer]) => [key, summarizeAnswer(answer)]));
 }
+
+// What the classifier was asked about, short enough to stay on one log line.
+export function describeAction(state: unknown, limit = 160): string {
+  const text = typeof state === "string" ? state : JSON.stringify(state);
+  const oneLine = text.replace(/\s+/g, " ").trim();
+  return oneLine.length <= limit ? oneLine : `${oneLine.slice(0, limit - 1)}…`;
+}

@@ -2,8 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { parseConfig } from "../src/config";
 import { selectModel } from "../src/model-selector";
 import { createHandler } from "../src/server";
-import { summarizeAnswer, summarizeAnswers } from "../src/decision-log";
-import type { Fetch } from "../src/llama-swap-client";
+import { summarizeAnswer, summarizeAnswers, describeAction } from "../src/decision-log";import type { Fetch } from "../src/llama-swap-client";
 
 const config = () => parseConfig(["--fallback-model", "small", "--timeout-ms", "1000"], {});
 const payload = {
@@ -235,5 +234,10 @@ describe("decision logging", () => {
   test("keeps every question and survives an empty answer set", () => {
     expect(summarizeAnswers({})).toEqual({});
     expect(Object.keys(summarizeAnswers({ safe: { type: "noul", noul: 0.1 }, risky: { type: "choice", choice: "ask", confidence: 0.05, probabilities: {} } }))).toEqual(["safe", "risky"]);
+  });
+  test("names the action on one line and bounds its length", () => {
+    expect(describeAction("  the user\n  runs a command  ")).toBe("the user runs a command");
+    expect(describeAction({ command: "ls" })).toBe('{"command":"ls"}');
+    expect(describeAction("x".repeat(20), 10)).toBe(`${"x".repeat(9)}…`);
   });
 });
