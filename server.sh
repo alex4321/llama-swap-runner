@@ -15,7 +15,7 @@ source "$SELF_DIR/preparation.sh" "$CONFIG"
 bash "$SELF_DIR/jev.sh" --check-config --fallback-model "$DEFAULT_FALLBACK_MODEL" "$@"
 "$LLAMA_SWAP_EXECUTABLE_PATH" --config "$LLAMASWAP_CONFIG_FILE" --listen "$LLAMASWAP_LISTEN" --watch-config >> server.log 2>&1 &
 SWAP_PID=$!
-bash "$SELF_DIR/jev.sh" --fallback-model "$DEFAULT_FALLBACK_MODEL" "$@" >> jev.log 2>&1 &
+bash "$SELF_DIR/jev-supervise.sh" --fallback-model "$DEFAULT_FALLBACK_MODEL" "$@" >> jev.log 2>&1 &
 JEV_PID=$!
 echo "llama-swap started (PID $SWAP_PID), log: $LLAMASWAP_CONFIG_DIR/server.log"
-echo "LocalJev wrapper started (PID $JEV_PID), log: $LLAMASWAP_CONFIG_DIR/jev.log"
+echo "LocalJev wrapper started under a supervisor (PID $JEV_PID), log: $LLAMASWAP_CONFIG_DIR/jev.log"

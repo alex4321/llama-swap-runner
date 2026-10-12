@@ -8,7 +8,7 @@ test("startup validates options before launching and forwards wrapper options", 
     for (const dir of ["llama-swap/build", "llama.cpp/build/bin", "localjev/src", "bin", "config"]) {
       mkdirSync(join(root, dir), { recursive: true });
     }
-    for (const script of ["server.sh", "jev.sh", "preparation.sh"]) {
+    for (const script of ["server.sh", "jev.sh", "jev-supervise.sh", "preparation.sh"]) {
       copyFileSync(new URL(`../../${script}`, import.meta.url), join(root, script));
     }
     writeFileSync(join(root, "localjev/src/index.ts"), "");
@@ -25,7 +25,7 @@ printf '%s\\n' "$*" > "$TEST_ROOT/jev-args"
     writeFileSync(join(root, "llama-swap/build/llama-swap-linux-amd64"), `#!/usr/bin/env bash
 printf '%s\\n' "$*" > "$TEST_ROOT/swap-args"
 `, { mode: 0o755 });
-    const env = { ...process.env, TEST_ROOT: root, PATH: `${root}/bin:${process.env.PATH}` };
+    const env = { ...process.env, TEST_ROOT: root, PATH: `${root}/bin:${process.env.PATH}`, JEV_RESTART_DELAY: "60" };
     const run = (args: string[]) => Bun.spawnSync(["bash", join(root, "server.sh"), ...args], { env });
     expect(run([]).exitCode).toBe(1);
     // A rejected option must stop the script before either service is launched.
@@ -42,6 +42,8 @@ printf '%s\\n' "$*" > "$TEST_ROOT/swap-args"
     expect(readFileSync(join(root, "swap-args"), "utf8")).toContain("--listen localhost:8080 --watch-config");
     expect(await Bun.file(join(root, "config/server.log")).exists()).toBe(true);
     expect(await Bun.file(join(root, "config/jev.log")).exists()).toBe(true);
+    // The supervisor is still running in the background; stop it before the tree goes away.
+    Bun.spawnSync(["bash", "-c", `pkill -f "$TEST_ROOT/jev-supervise.sh" || true`], { env });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

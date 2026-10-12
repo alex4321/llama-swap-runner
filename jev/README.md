@@ -24,6 +24,13 @@ Wrapper options are forwarded after the config path. Configuration is checked
 before either process starts. Logs go to `server.log` and `jev.log` beside
 the llama-swap config. The script prints PIDs; verify service health separately.
 
+The wrapper runs under `jev-supervise.sh`, which restarts it whenever the process
+exits, so a crash or a failed port bind cannot leave `:8082` unguarded and force
+every consumer to fail-close. Restart delay doubles from `JEV_RESTART_DELAY`
+(default 2s) up to `JEV_MAX_RESTART_DELAY` (default 30s). To stop the pair, kill
+the supervisor first (`pkill -f jev-supervise.sh`), otherwise the loop simply
+starts a new wrapper.
+
 OpenChamber's custom endpoint is
 `http://127.0.0.1:8082/v1/systemone`, with model `jev-latest`.
 Port 8081 is deliberately left available for standalone LocalJev experiments.
