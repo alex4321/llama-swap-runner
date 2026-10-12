@@ -17,6 +17,7 @@ test("startup validates options before launching and forwards wrapper options", 
     writeFileSync(join(root, "bin/bun"), `#!/usr/bin/env bash
 if [[ "$*" == *"--check-config"* ]]; then
   [[ "$*" == *"--fallback-model "* ]] || exit 1
+  [[ "$*" == *"--port 0"* ]] && exit 1
   exit 0
 fi
 printf '%s\\n' "$*" > "$TEST_ROOT/jev-args"
@@ -27,14 +28,17 @@ printf '%s\\n' "$*" > "$TEST_ROOT/swap-args"
     const env = { ...process.env, TEST_ROOT: root, PATH: `${root}/bin:${process.env.PATH}` };
     const run = (args: string[]) => Bun.spawnSync(["bash", join(root, "server.sh"), ...args], { env });
     expect(run([]).exitCode).toBe(1);
-    expect(run([join(root, "config/models.yml")]).exitCode).toBe(1);
+    // A rejected option must stop the script before either service is launched.
+    expect(run([join(root, "config/models.yml"), "--port", "0"]).exitCode).toBe(1);
     expect(await Bun.file(join(root, "swap-args")).exists()).toBe(false);
     expect(await Bun.file(join(root, "jev-args")).exists()).toBe(false);
-    const started = run([join(root, "config/models.yml"), "--fallback-model", "small", "--port", "8099"]);
+    const started = run([join(root, "config/models.yml"), "--port", "8099"]);
     expect(started.exitCode).toBe(0);
     // The startup script intentionally launches children in the background.
     await Bun.sleep(100);
-    expect(readFileSync(join(root, "jev-args"), "utf8")).toContain("--fallback-model small --port 8099");
+    const wrapperArgs = readFileSync(join(root, "jev-args"), "utf8");
+    expect(wrapperArgs).toContain("--fallback-model");
+    expect(wrapperArgs).toContain("--port 8099");
     expect(readFileSync(join(root, "swap-args"), "utf8")).toContain("--listen localhost:8080 --watch-config");
     expect(await Bun.file(join(root, "config/server.log")).exists()).toBe(true);
     expect(await Bun.file(join(root, "config/jev.log")).exists()).toBe(true);

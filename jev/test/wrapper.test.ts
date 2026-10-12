@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { parseConfig } from "../src/config";
 import { selectModel } from "../src/model-selector";
 import { createHandler } from "../src/server";
+import { summarizeAnswer, summarizeAnswers } from "../src/decision-log";
 import type { Fetch } from "../src/llama-swap-client";
 
 const config = () => parseConfig(["--fallback-model", "small", "--timeout-ms", "1000"], {});
@@ -222,5 +223,17 @@ describe("Jev integration with mock llama-swap", () => {
     resident = true;
     const response = await handler(new Request("http://localhost/ready"));
     expect((await response.json()).upstream_model).toBe("qwen-3.8-27b");
+  });
+});
+
+describe("decision logging", () => {
+  test("records the verdict and keeps confidence only where the answer has it", () => {
+    expect(summarizeAnswer({ type: "noul", noul: 0.9 })).toEqual({ value: 0.9 });
+    expect(summarizeAnswer({ type: "choice", choice: "ask", confidence: 0.75, probabilities: {} })).toEqual({ value: "ask", confidence: 0.75 });
+    expect(summarizeAnswer({ type: "score", score: 3, confidence: 0.5, legend: {}, probabilities: {} })).toEqual({ value: 3, confidence: 0.5 });
+  });
+  test("keeps every question and survives an empty answer set", () => {
+    expect(summarizeAnswers({})).toEqual({});
+    expect(Object.keys(summarizeAnswers({ safe: { type: "noul", noul: 0.1 }, risky: { type: "choice", choice: "ask", confidence: 0.05, probabilities: {} } }))).toEqual(["safe", "risky"]);
   });
 });
