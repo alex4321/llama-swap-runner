@@ -42,10 +42,29 @@ configuration. To rebuild llama.cpp without disturbing it:
 cd llama.cpp && cmake --build build --config Release -j$(nproc)
 ```
 
-The current binaries were built with CMake 4.2.3, CUDA 13.1, GCC 15.2 and
-ccache. `llama-swap` additionally needs Go (>= 1.27, see its `go.mod`; older
+The current binaries were built with CMake 4.3.4, CUDA 13.3, GCC 15.3 and
+ccache. `llama-swap` additionally needs Go (>= 1.27.3, see its `go.mod`; older
 toolchains download the right one automatically) and Node.js for the embedded
 web UI.
+
+### After a CUDA toolkit upgrade
+
+Both CMake caches record the toolkit's versioned library paths (for example
+`/usr/local/cuda-13.1/.../libcublasLt.so`), not the `/usr/local/cuda`
+symlink. Once the old toolkit is removed, an incremental build fails at link
+time with `cannot find /usr/local/cuda-<old>/...`. Reconfigure both from
+scratch (compiled objects are reused through ccache):
+
+```bash
+cd llama.cpp && cmake --fresh -B build -DGGML_CUDA=ON \
+  -DCMAKE_CUDA_FLAGS=-Xcompiler=--sysroot=$HOME/miniconda3/envs/cuda-build/x86_64-conda-linux-gnu/sysroot
+cmake --build build --config Release -j$(nproc)
+
+cd ../Strata && rm -rf build/CMakeCache.txt build/CMakeFiles && ./update.sh
+```
+
+Strata's `update.sh` exits 0 even when the engine fails to compile; check
+that its last line reports the new engine version (`engine/BUILD.json`).
 
 ## Run
 
@@ -170,3 +189,8 @@ To update only one submodule:
 git submodule update --remote --merge llama.cpp
 git submodule update --remote --merge llama-swap
 ```
+
+To pin release tags instead of branch heads, check out the tag inside the
+submodule (`git -C llama.cpp fetch --tags && git -C llama.cpp checkout bNNNNN`,
+`git -C llama-swap checkout vNNN`). Update Strata with its own
+`Strata/update.sh`, which also rebuilds the engine and refreshes `.venv`.
