@@ -38,10 +38,17 @@
  ],
  "user_args": [
   "--ram-keep-gib",
-  "16"
+  "21",
+  "--vram-reserve-mib",
+  "1700",
+  "--resident-budget-gib",
+  "40"
  ],
  "env": {
-  "STRATA_RAM_ADAPT": "1"
+  "STRATA_PREFILL_LAYER_MAJOR": "1",
+  "STRATA_PREFILL_LM_TOKENS": "32768",
+  "STRATA_RAM_ADAPT": "1",
+  "STRATA_UNBUFFERED_LOAD": "1"
  },
  "port": 8080,
  "gpu": 0,
