@@ -101,18 +101,21 @@ Example config for a local `llama-server` model:
 globalTTL: 300
 
 models:
-  qwen-3.6-27b:
+  qwen-3.8-27b:
     cmd: >-
       llama-server --port ${PORT}
-      --model Qwen3.6-27B-Q4_K_M.gguf
-      --mmproj Qwen-3.6-27B-mmproj-BF16.gguf
+      --model Qwen3.8-27B-UD-Q4_K_M.gguf
+      --mmproj Qwen3.8-27B-mmproj-BF16.gguf
       -c 131072
       -fa 1
       -ngl 64
       --cache-type-k q8_0
       --cache-type-v q8_0
-      --chat-template-kwargs '{"preserve_thinking":true}'
+      --chat-template-kwargs '{"preserve_thinking":true,"preserve_reasoning":true}'
 ```
+
+Projectors are named after their model file without the quant tag, plus
+`-mmproj-BF16` (for example `Qwen3.8-27B-mmproj-BF16.gguf`).
 
 Model paths are resolved relative to the config file directory because
 `preparation.sh` changes into that directory before starting `llama-swap`.
@@ -127,7 +130,7 @@ curl http://localhost:8080/health
 curl http://localhost:8080/v1/models
 curl http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"qwen-3.6-27b","messages":[{"role":"user","content":"Say hello"}],"max_tokens":32}'
+  -d '{"model":"qwen-3.8-27b","messages":[{"role":"user","content":"Say hello"}],"max_tokens":32}'
 ```
 
 ## Local Jev API
