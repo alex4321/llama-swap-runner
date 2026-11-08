@@ -158,6 +158,29 @@ bash bench.sh /path/to/config.yml
 `bench.sh` strips server-only arguments such as `--port`, `--ctx-size`, and
 `--mmproj` before invoking `llama-bench`.
 
+### Long-prompt benchmark
+
+`longbench.py` measures a model as it is served: prompt reading (prefill) and
+generation speed for long prompts, sent through llama-swap's OpenAI endpoint.
+It works for both llama-server and Strata models, which both report `timings`.
+
+```bash
+python3 -I longbench.py --model strata-qwen-3.8-flash-next-iq3_s \
+  --corpus llama-swap --out results.json
+```
+
+The prompt is real source code (the `.go` files under `--corpus`, test files
+excluded) cut to each `--sizes` target (default 2K to 64K tokens), followed by a
+request for a long code review; `--gen` tokens (512) are generated at
+temperature 0, `--runs` (2) times per size. A unique nonce at the start of every
+prompt keeps the prefix cache from being reused (each line shows `cache 0`).
+The first request loads the model and is not measured.
+
+Results depend on the corpus: pointing it at the `llama-swap` submodule means a
+llama-swap update changes the prompts. A code review quotes the code, so draft
+acceptance is high and generation is faster than on prose. It loads the model
+on the GPU, so run it only when the machine is otherwise idle.
+
 ## Update Submodules
 
 Fetch and checkout the latest upstream commits for both submodules:
