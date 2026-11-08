@@ -15,6 +15,10 @@ running benchmarks from the same model config.
 - `server.sh`: starts `llama-swap` on `localhost:8080` with config watching.
 - `bench.sh`: runs `llama-bench` for model commands found in the config.
 - `preparation.sh`: shared path setup and config validation.
+- `longbench.py`: long-prompt prefill/generation benchmark through llama-swap.
+- `strata-configs/`: versioned copies of Strata's run configs; see
+  [strata-configs/README.md](strata-configs/README.md) for the IQ3_S setup,
+  its memory tiers, settings and measurements.
 
 ## Build
 
